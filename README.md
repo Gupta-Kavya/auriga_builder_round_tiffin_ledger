@@ -51,4 +51,4 @@ Run `npm test` for billing tests and `npm run build --prefix frontend` to verify
 
 ## Stack
 
-React + Vite frontend; Node.js + Express REST API; MongoDB + Mongoose; bcrypt password hashes and JWT login.
+React; Node.js + Express REST API; MongoDB + Mongoose; bcrypt password hashes and JWT login.
