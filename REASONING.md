@@ -1,11 +1,21 @@
-# Reasoning
+# REASONING.md
 
-I kept the scope centered on the owner's daily actions: add a subscription, find a customer by phone, pause/resume, and see a bill. A single owner account owns its customers, so authentication and data separation stay simple.
+## How I approached it
 
-The customer schema stores the monthly plan price, start date and dated pause intervals. An open interval represents a pause awaiting resume. Billing walks the weekdays of the requested month. This makes the denominator (all month weekdays) and numerator (eligible unpaused weekdays through today) clear, including mid-month starts and pauses across month boundaries. A resume date is the first served day, so the pause ends the previous day.
+I started with the main problem: a customer should pay only for the weekdays when their tiffin was due. I kept the app small, with one dashboard for adding customers, finding them by phone, pausing or resuming a plan, and checking the monthly bill.
 
-The UI uses one dashboard and a customer detail panel instead of a large navigation structure. Search, sorting and pagination are server-side so they also work with a growing customer list.
+For billing, I divide the monthly price by the total weekdays in that month. Then I count the eligible weekdays from the subscription start date, leaving out paused dates. For the current month, I count only up to today. The app currently assumes an unpaused weekday was delivered; it does not have a separate delivery confirmation feature.
 
-I tested the billing function with a full-month pause, a mid-month start, a current-month cutoff and status changes. I also ran the backend tests and frontend production build. The app treats unpaused weekdays as delivered because actual delivery confirmation was outside the brief; that assumption is shown next to the bill.
+## The three twists
 
-For the twist, I added a persisted notification outbox with a unique customer/date index. This makes the assessment clock repeatable without duplicate notices. A transfer appends recipient periods to the same subscription, preserving its calendar cycle and pauses; bill calculation attributes each eligible weekday to the holder on that date. Imports normalize row values first, then compare normalized phones with existing customers and earlier rows, reporting invalid rows separately from duplicates. Tests cover weekday and pause filtering, transfer boundaries, split totals, mixed dates, and malformed rows.
+For morning notifications, I added `/clock` to check who is due on a given date and `/outbox` to show the messages. I made repeat calls for the same date avoid duplicate messages. Since I was not given an external Notification Service API, I used a MongoDB-backed outbox.
+
+For transfers, I kept the subscription and plan price the same but saved the dates for each customer who held it. The transfer date is the first day assigned to the new customer. This lets the monthly bill show each person’s delivered days and amount.
+
+For imports, I accepted CSV rows, cleaned phone numbers and common date formats, and checked for duplicate phones. Invalid rows are reported separately, so one bad row does not stop the rest of the list.
+
+## Testing and fixes
+
+I tested the billing calculation with pauses, a mid-month start, and a partial current month. I added tests for weekday notification rules, the transfer date boundary, split bills, and messy import data. All six backend tests passed, and the frontend production build passed.
+
+During the work, I found that the desktop copy was missing `.env.example`, even though the README referred to it, so I added it. I also adjusted the import parser to handle year-first dates and unambiguous month-first dates. I have not tested the full app against a running MongoDB instance, so that is still the main check I would do before submission.
